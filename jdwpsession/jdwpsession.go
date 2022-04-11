@@ -300,7 +300,7 @@ func (s *session) JvmCommandPacketChannel() <-chan *CommandPacket {
 }
 
 func (s *session) SendCommand(commandPacket *CommandPacket) <-chan *ReplyPacket {
-	fmt.Println(commandPacket)
+	//fmt.Println(commandPacket)
 	sendid := atomic.AddUint32(&s.sequence, 1)
 	request := request{
 		id:            sendid,

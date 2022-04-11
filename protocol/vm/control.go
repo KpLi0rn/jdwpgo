@@ -47,3 +47,14 @@ var HoldEventsCommand = jdwp.Command{Commandset: 1, Command: 15}
 
 // ReleaseEventsCommand represents the hold events command
 var ReleaseEventsCommand = jdwp.Command{Commandset: 1, Command: 16}
+
+var ClearEventCommand = jdwp.Command{Commandset: 15, Command: 2, HasCommandData: true}
+
+type ClearEventRequest struct {
+	EventKind byte
+	RequestID int32
+}
+
+type ThreadStatusRequest struct {
+	ThreadID uint64
+}
