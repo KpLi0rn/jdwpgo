@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/jquirke/jdwpgo/debuggercore"
-	"github.com/jquirke/jdwpgo/jdwpsession"
-	"github.com/jquirke/jdwpgo/protocol/vm"
+	"github.com/kpli0rn/jdwpgo/debuggercore"
+	"github.com/kpli0rn/jdwpgo/jdwpsession"
+	"github.com/kpli0rn/jdwpgo/protocol/vm"
 	"net"
 )
 

@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/jquirke/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
 )
 
 // IDSizesCommand represents the IDSizes command

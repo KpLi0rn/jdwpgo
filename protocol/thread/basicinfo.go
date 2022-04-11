@@ -1,9 +1,9 @@
 package thread
 
 import (
-	"github.com/jquirke/jdwpgo/api/jdwp"
-	"github.com/jquirke/jdwpgo/protocol/basetypes"
-	"github.com/jquirke/jdwpgo/protocol/common"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
+	"github.com/kpli0rn/jdwpgo/protocol/common"
 )
 
 // NameCommand represents the name command

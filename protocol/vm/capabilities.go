@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jquirke/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
 )
 
 // CapabilitiesCommand represents the capabilities command

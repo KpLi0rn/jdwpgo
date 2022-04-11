@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/jquirke/jdwpgo/api/jdwp"
-	"github.com/jquirke/jdwpgo/jdwpsession"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/jdwpsession"
 	"gopkg.in/restruct.v1"
 )
 

@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"github.com/jquirke/jdwpgo/api/jdwp"
-	"github.com/jquirke/jdwpgo/protocol/basetypes"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
 )
 
 // SuspendCommand represents the suspendcommand

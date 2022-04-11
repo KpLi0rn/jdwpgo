@@ -3,7 +3,7 @@ package common
 import (
 	"fmt"
 
-	"github.com/jquirke/jdwpgo/protocol/basetypes"
+	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
 )
 
 // ThreadID represents a threadID

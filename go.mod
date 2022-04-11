@@ -1,4 +1,4 @@
-module github.com/jquirke/jdwpgo
+module github.com/kpli0rn/jdwpgo
 
 go 1.17
 

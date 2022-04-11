@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/jquirke/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
 )
 
 var EventRequestCommand = jdwp.Command{Commandset: 15, Command: 1, HasCommandData: true, HasReplyData: true}

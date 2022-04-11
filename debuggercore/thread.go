@@ -1,9 +1,9 @@
 package debuggercore
 
 import (
-	"github.com/jquirke/jdwpgo/protocol/basetypes"
-	"github.com/jquirke/jdwpgo/protocol/common"
-	"github.com/jquirke/jdwpgo/protocol/thread"
+	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
+	"github.com/kpli0rn/jdwpgo/protocol/common"
+	"github.com/kpli0rn/jdwpgo/protocol/thread"
 )
 
 // ThreadCommands expose the ThreadCommands commands

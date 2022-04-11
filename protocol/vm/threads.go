@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jquirke/jdwpgo/protocol/common"
+	"github.com/kpli0rn/jdwpgo/protocol/common"
 
-	"github.com/jquirke/jdwpgo/api/jdwp"
+	"github.com/kpli0rn/jdwpgo/api/jdwp"
 )
 
 // AllThreadsCommand represents the AllThreads command
