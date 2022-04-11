@@ -1,6 +1,8 @@
 package debuggercore
 
 import (
+	"github.com/jquirke/jdwpgo/protocol/basetypes"
+	"github.com/jquirke/jdwpgo/protocol/common"
 	"github.com/jquirke/jdwpgo/protocol/vm"
 )
 
@@ -22,6 +24,10 @@ type VMCommands interface {
 	HoldEvents() error
 	ReleaseEvents() error
 	Exit(int32) error
+
+	// Methods
+	AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMethodsReply, error)
+	SendEventRequest(threadId common.ThreadID) (*vm.EventRequestSetReply, error)
 }
 
 func (d *debuggercore) Version() (*vm.VersionReply, error) {
@@ -62,6 +68,7 @@ func (d *debuggercore) TopLevelThreadGroups() (*vm.TopLevelThreadGroupsReply, er
 
 func (d *debuggercore) IDSizes() (*vm.IDSizesReply, error) {
 	var idsizesReply vm.IDSizesReply
+
 	err := d.processCommand(vm.IDSizesCommand, nil, &idsizesReply)
 	if err != nil {
 		return nil, err
@@ -128,4 +135,31 @@ func (d *debuggercore) Exit(code int32) error {
 		return err
 	}
 	return nil
+}
+
+// 需要创建 methods 然后发送并进行接受
+func (d *debuggercore) AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMethodsReply, error) {
+	var allmethodsReply vm.AllMethodsReply
+
+	getCommandMethod := &vm.GetCommandMethod{
+		RefType: refTypeId,
+	}
+	// 第一个是传统的模式，第二个是data的数据，第三个是处理返回的数据
+	err := d.processCommand(vm.AllMethodsCommand, getCommandMethod, &allmethodsReply)
+	if err != nil {
+		return nil, err
+	}
+	return &allmethodsReply, nil
+}
+
+func (d *debuggercore) SendEventRequest(threadId common.ThreadID) (*vm.EventRequestSetReply, error) {
+	var eventRequestSetReply vm.EventRequestSetReply
+
+	setEvtRequest := &vm.SetEventRequest{}
+
+	err := d.processCommand(vm.AllMethodsCommand, setEvtRequest, &eventRequestSetReply)
+	if err != nil {
+		return nil, err
+	}
+	return &eventRequestSetReply, nil
 }

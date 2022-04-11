@@ -1,6 +1,9 @@
 package vm
 
-import "github.com/jquirke/jdwpgo/api/jdwp"
+import (
+	"github.com/jquirke/jdwpgo/api/jdwp"
+	"github.com/jquirke/jdwpgo/protocol/basetypes"
+)
 
 // SuspendCommand represents the suspendcommand
 var SuspendCommand = jdwp.Command{Commandset: 1, Command: 8}
@@ -15,6 +18,14 @@ var ExitCommand = jdwp.Command{Commandset: 1, Command: 10, HasCommandData: true}
 // https://docs.oracle.com/javase/7/docs/platform/jpda/jdwp/jdwp-protocol.html#JDWP_VirtualMachine_Exit
 type ExitCommandData struct {
 	ExitCode int32
+}
+
+// https://docs.oracle.com/javase/7/docs/platform/jpda/jdwp/jdwp-protocol.html#JDWP_ReferenceType_Methods
+type GetCommandMethod struct {
+	RefType basetypes.JWDPRefTypeID
+}
+
+type SetEventRequest struct {
 }
 
 // HoldEventsCommand represents the hold events command

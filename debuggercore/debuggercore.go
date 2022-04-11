@@ -3,7 +3,7 @@ package debuggercore
 import (
 	"encoding/binary"
 	"errors"
-
+	"fmt"
 	"github.com/jquirke/jdwpgo/api/jdwp"
 	"github.com/jquirke/jdwpgo/jdwpsession"
 	"gopkg.in/restruct.v1"
@@ -45,6 +45,7 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	var err error
 	if cmd.HasCommandData {
 		commandPacket.Data, err = restruct.Pack(binary.BigEndian, requestStruct)
+		fmt.Println(commandPacket)
 		if err != nil {
 			return err
 		}
@@ -57,9 +58,11 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	if !ok {
 		return errors.New("Channel closed")
 	}
+
 	// TODO handle protocol returned err
 
 	if cmd.HasReplyData {
+		//fmt.Println(string(reply.Data))
 		err = restruct.Unpack(reply.Data, binary.BigEndian, replyStruct)
 	}
 	return err
