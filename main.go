@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/kpli0rn/jdwpgo/debuggercore"
 	"github.com/kpli0rn/jdwpgo/jdwpsession"
@@ -15,6 +16,11 @@ func getMethodByName(methods *vm.AllMethodsReply, name string) *vm.AllMethodsMet
 		}
 	}
 	return nil
+}
+
+// 40640200000001010000000200000000000011770100000000000003e100006000028a03e80000000000000031
+func parseEvent(buf []byte) {
+
 }
 
 func main() {
@@ -73,18 +79,39 @@ func main() {
 			}
 			var threadID uint64
 			for _, thread := range threads.Threads {
-				fmt.Println(thread.ObjectID)
-				if thread.ObjectID == uint64(4471) {
-					fmt.Println(thread.ObjectID)
+				threadStatus, _ := debuggercore.VMCommands().StatusThread(thread.ObjectID)
+				// 遍历线程的过程中需要编写一个函数去查询线程当前的状态
+				if threadStatus.ThreadStatus == 2 {
 					threadID = thread.ObjectID
+					break
 				}
+				//if thread.ObjectID == uint64(4417) {
+				//	fmt.Println(thread.ObjectID)
+				//	threadID = thread.ObjectID
+				//}
 			}
+
+			fmt.Println(threadID)
+
 			fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
-			// 这里应该是下断点
+			//// 这里应该是下断点
 			debuggercore.VMCommands().Suspend()
 			reply, _ := debuggercore.VMCommands().SendEventRequest(1, threadID)
 			fmt.Println(reply.RequestID)
 			debuggercore.VMCommands().Resume()
+
+			buf := make([]byte, 1024)
+			for {
+				num, _ := conn.Read(buf)
+				fmt.Println(num)
+				// 获取到了返回的 event 之后要进行解析
+				fmt.Println(hex.EncodeToString(buf[:num]))
+				//parseEvent(buf)
+				if num != 0 {
+					break
+				}
+			}
+			debuggercore.VMCommands().ClearCommand(reply.RequestID)
 		}
 	}
 

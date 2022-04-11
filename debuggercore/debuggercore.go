@@ -61,6 +61,7 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	// TODO handle protocol returned err
 
 	if cmd.HasReplyData {
+		//_ = reply.Data
 		err = restruct.Unpack(reply.Data, binary.BigEndian, replyStruct)
 	}
 	return err

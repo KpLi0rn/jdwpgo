@@ -44,3 +44,14 @@ func (t *TopLevelThreadGroupsReply) String() string {
 	}
 	return builder.String()
 }
+
+var ThreadStatusCommand = jdwp.Command{Commandset: 11, Command: 4, HasCommandData: true, HasReplyData: true}
+
+type ThreadStatusReply struct {
+	ThreadStatus  int32
+	SuspendStatus int32
+}
+
+func (t *ThreadStatusReply) String() string {
+	return fmt.Sprintf("ThreadStatus: %v SuspendStatus: %v", t.ThreadStatus, t.SuspendStatus)
+}

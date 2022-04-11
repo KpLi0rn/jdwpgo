@@ -12,6 +12,8 @@ type VMCommands interface {
 	// Thread ops
 	AllThreads() (*vm.AllThreadsReply, error)
 	TopLevelThreadGroups() (*vm.TopLevelThreadGroupsReply, error)
+	StatusThread(threadId uint64) (*vm.ThreadStatusReply, error)
+
 	// Bootstrap
 	Version() (*vm.VersionReply, error)
 	IDSizes() (*vm.IDSizesReply, error)
@@ -27,6 +29,7 @@ type VMCommands interface {
 	// Methods
 	AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMethodsReply, error)
 	SendEventRequest(eventKind int8, threadId uint64) (*vm.EventRequestSetReply, error)
+	ClearCommand(requestId int32) error
 }
 
 func (d *debuggercore) Version() (*vm.VersionReply, error) {
@@ -171,4 +174,33 @@ func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.Ev
 		return nil, err
 	}
 	return &eventRequestSetReply, nil
+}
+
+// https://docs.oracle.com/en/java/javase/11/docs/specs/jdwp/jdwp-protocol.html#JDWP_EventRequest
+// eventkind 1 未测试
+func (d *debuggercore) ClearCommand(requestId int32) error {
+
+	clearEventRequest := &vm.ClearEventRequest{
+		EventKind: byte(1), // 这个eventkind 可以写死
+		RequestID: requestId,
+	}
+
+	err := d.processCommand(vm.ClearEventCommand, clearEventRequest, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *debuggercore) StatusThread(threadId uint64) (*vm.ThreadStatusReply, error) {
+	var threadStatusReply vm.ThreadStatusReply
+
+	threadStatusRequest := &vm.ThreadStatusRequest{
+		ThreadID: threadId,
+	}
+	err := d.processCommand(vm.ThreadStatusCommand, threadStatusRequest, &threadStatusReply)
+	if err != nil {
+		return nil, err
+	}
+	return &threadStatusReply, err
 }
