@@ -1,0 +1,4 @@
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+gopkg.in/restruct.v1 v1.0.0-20190323193435-3c2afb705f3c h1:7j7Yy/3gedviEts3jKY0bEruQkTFKh+8pDmEFaM6UBc=
+gopkg.in/restruct.v1 v1.0.0-20190323193435-3c2afb705f3c/go.mod h1:WJaLhyHHEQFOgwIxu/SJxvUHJA18glYsMETBTMIySTY=

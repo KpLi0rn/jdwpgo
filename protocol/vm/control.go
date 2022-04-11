@@ -26,7 +26,21 @@ type GetCommandMethod struct {
 }
 
 type SetEventRequest struct {
+	EventKind  int8
+	SuspendAll int8
+	Modifiers  int32
+	ModKind    int8
+	ThreadID   uint64 // uint64
+	Size       int32
+	Depth      int32
 }
+
+//type EventRequest struct {
+//	ModKind  int32
+//	ThreadID uint64 // uint64
+//	Size     int32
+//	Depth    int32
+//}
 
 // HoldEventsCommand represents the hold events command
 var HoldEventsCommand = jdwp.Command{Commandset: 1, Command: 15}

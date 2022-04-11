@@ -2,7 +2,6 @@ package debuggercore
 
 import (
 	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
-	"github.com/kpli0rn/jdwpgo/protocol/common"
 	"github.com/kpli0rn/jdwpgo/protocol/vm"
 )
 
@@ -27,7 +26,7 @@ type VMCommands interface {
 
 	// Methods
 	AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMethodsReply, error)
-	SendEventRequest(threadId common.ThreadID) (*vm.EventRequestSetReply, error)
+	SendEventRequest(eventKind int8, threadId uint64) (*vm.EventRequestSetReply, error)
 }
 
 func (d *debuggercore) Version() (*vm.VersionReply, error) {
@@ -152,12 +151,22 @@ func (d *debuggercore) AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMet
 	return &allmethodsReply, nil
 }
 
-func (d *debuggercore) SendEventRequest(threadId common.ThreadID) (*vm.EventRequestSetReply, error) {
+func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.EventRequestSetReply, error) {
 	var eventRequestSetReply vm.EventRequestSetReply
 
-	setEvtRequest := &vm.SetEventRequest{}
+	// 0f 01 一位
+	setEvtRequest := &vm.SetEventRequest{
+		EventKind:  eventKind, // 1位
+		SuspendAll: 2,         // 1位
+		Modifiers:  1,
 
-	err := d.processCommand(vm.AllMethodsCommand, setEvtRequest, &eventRequestSetReply)
+		ModKind:  10, // 1位
+		ThreadID: threadId,
+		Size:     0,
+		Depth:    0,
+	}
+
+	err := d.processCommand(vm.EventRequestCommand, setEvtRequest, &eventRequestSetReply)
 	if err != nil {
 		return nil, err
 	}

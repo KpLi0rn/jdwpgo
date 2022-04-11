@@ -61,32 +61,29 @@ func main() {
 	*/
 	for _, clas := range allClasses.Classes {
 		if clas.Signature.String() == "Ljava/lang/Runtime;" {
-			//fmt.Println(clas.ReferenceTypeID.String())
-			methods, _ := debuggercore.VMCommands().AllMethods(clas.ReferenceTypeID)
-			//fmt.Println(methods.String())
+			methods, _ := debuggercore.VMCommands().AllMethods(clas.ReferenceTypeID) // 10d9
 			getRuntimeMethod := getMethodByName(methods, "getRuntime")
 			if getRuntimeMethod == nil {
 				return
 			}
-
 			fmt.Println(getRuntimeMethod.String())
-
 			threads, err := debuggercore.VMCommands().AllThreads()
 			if err != nil {
 				fmt.Printf("err = %v\n", err)
 			}
-
-			var threadId uint64
+			var threadID uint64
 			for _, thread := range threads.Threads {
-				// 这里先固定一下看一下后面走不走的通
+				fmt.Println(thread.ObjectID)
 				if thread.ObjectID == uint64(4471) {
-					threadId = thread.ObjectID
+					fmt.Println(thread.ObjectID)
+					threadID = thread.ObjectID
 				}
 			}
-			fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadId))
-
+			fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
 			// 这里应该是下断点
 			debuggercore.VMCommands().Suspend()
+			reply, _ := debuggercore.VMCommands().SendEventRequest(1, threadID)
+			fmt.Println(reply.RequestID)
 			debuggercore.VMCommands().Resume()
 		}
 	}
