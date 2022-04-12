@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -52,10 +53,11 @@ type session struct {
 type request struct {
 	id            uint32
 	replyCh       chan *ReplyPacket
-	commandPacket *CommandPacket
+	commandPacket *CommandPacket // 请求中发送的 sig
 }
 
 // WrappedPacket represents a command or reply packet
+// 针对请求进行封装 或者针对返回包进行解析处理
 type WrappedPacket struct {
 	Id            uint32
 	Flags         byte
@@ -63,6 +65,7 @@ type WrappedPacket struct {
 	ReplyPacket   *ReplyPacket
 }
 
+// 判断是不是空
 func (w *WrappedPacket) isCommandPacket() bool {
 	return w.CommandPacket != nil
 }
@@ -102,7 +105,7 @@ func New(conn net.Conn) Session {
 	return &session{
 		conn:                conn,
 		requestPending:      make(map[uint32]*request),
-		requestPendingQueue: make(chan *request, 10),
+		requestPendingQueue: make(chan *request, 10), // 请求池 容量 10
 	}
 }
 
@@ -146,6 +149,7 @@ func (s *session) rxLoop() {
 	for atomic.LoadInt32(&s.state) == sessionOpen {
 		err := s.dispatchInboundPacket()
 		if err != nil {
+			fmt.Println("here")
 			s.setErrorState(err)
 			break
 		}
@@ -178,8 +182,8 @@ func (s *session) txLoop() {
 }
 
 func (s *session) writePacket(request *request) error {
-	//s.conn.SetWriteDeadline(time.Now().Add(defaultWriteDeadlineMillis * time.Millisecond))
-	//s.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	s.conn.SetWriteDeadline(time.Now().Add(defaultWriteDeadlineMillis * time.Millisecond))
+	//s.conn.SetWriteDeadline(time.Now().Add(100 * time.Second))
 
 	var totalsize = 11 + (uint32)(len(request.commandPacket.Data))
 	err := binary.Write(s.conn, binary.BigEndian, totalsize)
@@ -213,33 +217,35 @@ func (s *session) writePacket(request *request) error {
 	return nil
 }
 
+//
 func (s *session) dispatchInboundPacket() error {
-	wrappedPacket, err := s.ReadPacket()
+	wrappedPacket, err := s.ReadPacket() // 读取数据包，返回解析好的数据包
 	s.sessionMutex.Lock()
 	defer s.sessionMutex.Unlock()
-
 	if err != nil {
 		return err
 	}
-
 	if wrappedPacket.isCommandPacket() {
-		s.jvmCommandPackets <- wrappedPacket.CommandPacket
+		s.jvmCommandPackets <- wrappedPacket.CommandPacket // chan 把包写到 jvm 里面
 	} else {
+		// 根据包的 id 来从 request pend 里面进行获取
 		request, ok := s.requestPending[wrappedPacket.Id]
 		if !ok {
 			fmt.Printf("warn: got unexpected reply for id: %v", wrappedPacket.Id)
 		} else {
 			request.replyCh <- wrappedPacket.ReplyPacket
-			//close(request.replyCh) //TODO turn back on
+			close(request.replyCh) //TODO turn back on
 		}
 	}
 	return nil
 }
 
-// 现在就是收到数据了 但是不知道为什么没有进行退出
 func (s *session) ReadPacket() (*WrappedPacket, error) {
+
 	var wrappedPacket WrappedPacket
-	s.conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+	s.conn.SetReadDeadline(time.Now().Add(100 * time.Second))
+
+	//s.conn.SetReadDeadline(time.Time{})
 	//var size uint32
 	//for {
 	//	err := binary.Read(s.conn, binary.BigEndian, &size)
@@ -255,52 +261,52 @@ func (s *session) ReadPacket() (*WrappedPacket, error) {
 	//	}
 	//}
 	var size uint32
+	//binary.Read(s.conn, binary.BigEndian, &size)
 	err := binary.Read(s.conn, binary.BigEndian, &size)
 	if err != nil {
 		return nil, err
 	}
 	//s.conn.SetReadDeadline(time.Now().Add(defaultReadDeadlineMillis * time.Millisecond))
-	// 猜测如果不输出的话就阻塞了
-	fmt.Println(fmt.Sprintf("recv size: %v", size)) // 离谱 一定要加这个 不然的话就会不稳定... （不过能稳定就是好事情)
-
+	//fmt.Println(fmt.Sprintf("[+] recv size: %v", size)) // 离谱 一定要加这个 不然的话就会不稳定... （不过能稳定就是好事情)
+	log.Println(fmt.Sprintf("[+] recv size: %v", size))
 	if size < headerBytes {
 		return nil, fmt.Errorf("packet too small: %v", size)
 	}
 	dataSize := size - headerBytes
 	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.Id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("2")
 	}
 	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.Flags)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("3")
 	}
-
 	var dataSlice *[]byte
-	if wrappedPacket.Flags&flagsReplyPacket == flagsReplyPacket {
+	if wrappedPacket.Flags&flagsReplyPacket == flagsReplyPacket { // 这里是处理响应
 		var replyPacket ReplyPacket
 		wrappedPacket.ReplyPacket = &replyPacket
 		err = binary.Read(s.conn, binary.BigEndian, &replyPacket.Errorcode)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("4")
 		}
 		dataSlice = &replyPacket.Data
-	} else {
+	} else { // 这里是处理请求
 		var commandPacket CommandPacket
 		wrappedPacket.CommandPacket = &commandPacket
 		err = binary.Read(s.conn, binary.BigEndian, &commandPacket.Commandset)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("5")
 		}
 		err = binary.Read(s.conn, binary.BigEndian, &commandPacket.Command)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("6")
 		}
 		dataSlice = &commandPacket.Data
 	}
 
 	*dataSlice = make([]byte, dataSize)
-	_, err = io.ReadFull(s.conn, *dataSlice)
+	//io.ReadFull(s.conn, *dataSlice) //指针
+	_, err = io.ReadFull(s.conn, *dataSlice) // 将 conn 的数据写到 这里面  然后timeout是 s.conn 抛出来的
 	if err != nil {
 		return nil, err
 	}

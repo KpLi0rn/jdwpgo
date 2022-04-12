@@ -34,7 +34,7 @@ type VMCommands interface {
 
 func (d *debuggercore) Version() (*vm.VersionReply, error) {
 	var versionReply vm.VersionReply
-	err := d.processCommand(vm.VersionCommand, nil, &versionReply)
+	err := d.processCommand(vm.VersionCommand, nil, &versionReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (d *debuggercore) Version() (*vm.VersionReply, error) {
 
 func (d *debuggercore) AllClasses() (*vm.AllClassReply, error) {
 	var allclassesReply vm.AllClassReply
-	err := d.processCommand(vm.AllClassesCommand, nil, &allclassesReply)
+	err := d.processCommand(vm.AllClassesCommand, nil, &allclassesReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (d *debuggercore) AllClasses() (*vm.AllClassReply, error) {
 
 func (d *debuggercore) AllThreads() (*vm.AllThreadsReply, error) {
 	var allthreadsReply vm.AllThreadsReply
-	err := d.processCommand(vm.AllThreadsCommand, nil, &allthreadsReply)
+	err := d.processCommand(vm.AllThreadsCommand, nil, &allthreadsReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (d *debuggercore) AllThreads() (*vm.AllThreadsReply, error) {
 
 func (d *debuggercore) TopLevelThreadGroups() (*vm.TopLevelThreadGroupsReply, error) {
 	var topLevelThreadGroupsReply vm.TopLevelThreadGroupsReply
-	err := d.processCommand(vm.TopLevelThreadGroupsCommand, nil, &topLevelThreadGroupsReply)
+	err := d.processCommand(vm.TopLevelThreadGroupsCommand, nil, &topLevelThreadGroupsReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (d *debuggercore) TopLevelThreadGroups() (*vm.TopLevelThreadGroupsReply, er
 func (d *debuggercore) IDSizes() (*vm.IDSizesReply, error) {
 	var idsizesReply vm.IDSizesReply
 
-	err := d.processCommand(vm.IDSizesCommand, nil, &idsizesReply)
+	err := d.processCommand(vm.IDSizesCommand, nil, &idsizesReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (d *debuggercore) IDSizes() (*vm.IDSizesReply, error) {
 
 func (d *debuggercore) Capabilities() (*vm.CapabilitiesReply, error) {
 	var capsReply vm.CapabilitiesReply
-	err := d.processCommand(vm.CapabilitiesCommand, nil, &capsReply)
+	err := d.processCommand(vm.CapabilitiesCommand, nil, &capsReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (d *debuggercore) Capabilities() (*vm.CapabilitiesReply, error) {
 
 func (d *debuggercore) CapabilitiesNew() (*vm.CapabilitiesNewReply, error) {
 	var capsNewReply vm.CapabilitiesNewReply
-	err := d.processCommand(vm.CapabilitiesNewCommand, nil, &capsNewReply)
+	err := d.processCommand(vm.CapabilitiesNewCommand, nil, &capsNewReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (d *debuggercore) CapabilitiesNew() (*vm.CapabilitiesNewReply, error) {
 }
 
 func (d *debuggercore) Suspend() error {
-	err := d.processCommand(vm.SuspendCommand, nil, nil)
+	err := d.processCommand(vm.SuspendCommand, nil, nil, false)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (d *debuggercore) Suspend() error {
 }
 
 func (d *debuggercore) Resume() error {
-	err := d.processCommand(vm.ResumeCommand, nil, nil)
+	err := d.processCommand(vm.ResumeCommand, nil, nil, false)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (d *debuggercore) Resume() error {
 }
 
 func (d *debuggercore) HoldEvents() error {
-	err := d.processCommand(vm.HoldEventsCommand, nil, nil)
+	err := d.processCommand(vm.HoldEventsCommand, nil, nil, false)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (d *debuggercore) HoldEvents() error {
 }
 
 func (d *debuggercore) ReleaseEvents() error {
-	err := d.processCommand(vm.ReleaseEventsCommand, nil, nil)
+	err := d.processCommand(vm.ReleaseEventsCommand, nil, nil, false)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (d *debuggercore) Exit(code int32) error {
 	exitCommandData := &vm.ExitCommandData{
 		ExitCode: code,
 	}
-	err := d.processCommand(vm.ExitCommand, exitCommandData, nil)
+	err := d.processCommand(vm.ExitCommand, exitCommandData, nil, false)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (d *debuggercore) AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMet
 		RefType: refTypeId,
 	}
 	// 第一个是传统的模式，第二个是data的数据，第三个是处理返回的数据
-	err := d.processCommand(vm.AllMethodsCommand, getCommandMethod, &allmethodsReply)
+	err := d.processCommand(vm.AllMethodsCommand, getCommandMethod, &allmethodsReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.Ev
 		Depth:    0,
 	}
 
-	err := d.processCommand(vm.EventRequestCommand, setEvtRequest, &eventRequestSetReply)
+	err := d.processCommand(vm.EventRequestCommand, setEvtRequest, &eventRequestSetReply, false)
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +181,10 @@ func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.Ev
 func (d *debuggercore) ClearCommand(requestId int32) error {
 
 	clearEventRequest := &vm.ClearEventRequest{
-		EventKind: byte(1), // 这个eventkind 可以写死
+		EventKind: 1, // 这个eventkind 可以写死
 		RequestID: requestId,
 	}
-
-	err := d.processCommand(vm.ClearEventCommand, clearEventRequest, nil)
+	err := d.processCommand(vm.ClearEventCommand, clearEventRequest, nil, true)
 	if err != nil {
 		return err
 	}
@@ -198,7 +197,7 @@ func (d *debuggercore) StatusThread(threadId uint64) (*vm.ThreadStatusReply, err
 	threadStatusRequest := &vm.ThreadStatusRequest{
 		ThreadID: threadId,
 	}
-	err := d.processCommand(vm.ThreadStatusCommand, threadStatusRequest, &threadStatusReply)
+	err := d.processCommand(vm.ThreadStatusCommand, threadStatusRequest, &threadStatusReply, false)
 	if err != nil {
 		return nil, err
 	}

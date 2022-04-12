@@ -36,7 +36,7 @@ func (d *debuggercore) ThreadCommands() ThreadCommands {
 	return d
 }
 
-func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{}, replyStruct interface{}) error {
+func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{}, replyStruct interface{}, listen bool) error {
 	commandPacket := &jdwpsession.CommandPacket{
 		Commandset: cmd.Commandset,
 		Command:    cmd.Command,
@@ -51,8 +51,23 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	// TODO implement timeout
 
 	replyCh := d.jdwpsession.SendCommand(commandPacket)
+	//select {
+	//case reply, ok := <-replyCh:
+	//	if !ok {
+	//		return errors.New("Channel closed")
+	//	}
+	//	if cmd.HasReplyData {
+	//		//_ = reply.Data
+	//		err = restruct.Unpack(reply.Data, binary.BigEndian, replyStruct)
+	//	}
+	//	return err
+	//
+	//}
 
-	reply, ok := <-replyCh
+	if listen {
+		return err
+	}
+	reply, ok := <-replyCh // 这里被阻塞了
 	if !ok {
 		return errors.New("Channel closed")
 	}

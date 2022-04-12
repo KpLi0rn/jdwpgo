@@ -17,7 +17,7 @@ func (d *debuggercore) Name(threadID common.ThreadID) (basetypes.JDWPString, err
 		ThreadID: threadID,
 	}
 	var nameReply thread.NameReply
-	err := d.processCommand(thread.NameCommand, nameCommandData, &nameReply)
+	err := d.processCommand(thread.NameCommand, nameCommandData, &nameReply, false)
 	if err != nil {
 		return basetypes.EmptyJWDPString(), err
 	}
