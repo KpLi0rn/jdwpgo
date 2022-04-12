@@ -44,7 +44,6 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	var err error
 	if cmd.HasCommandData {
 		commandPacket.Data, err = restruct.Pack(binary.BigEndian, requestStruct)
-		//fmt.Println(commandPacket.Data)
 		if err != nil {
 			return err
 		}

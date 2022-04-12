@@ -177,7 +177,7 @@ func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.Ev
 }
 
 // https://docs.oracle.com/en/java/javase/11/docs/specs/jdwp/jdwp-protocol.html#JDWP_EventRequest
-// eventkind 1 未测试
+// eventkind 1 未测试 存在问题
 func (d *debuggercore) ClearCommand(requestId int32) error {
 
 	clearEventRequest := &vm.ClearEventRequest{

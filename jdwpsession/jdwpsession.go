@@ -12,8 +12,8 @@ import (
 )
 
 const defaultPacketQueueLength = 50
-const defaultReadDeadlineMillis = 2000
-const defaultWriteDeadlineMillis = 2000
+const defaultReadDeadlineMillis = 5000
+const defaultWriteDeadlineMillis = 5000
 
 const headerBytes = 11
 const handshakebytes = "JDWP-Handshake"
@@ -34,6 +34,8 @@ type Session interface {
 	Stop() error
 	JvmCommandPacketChannel() <-chan *CommandPacket
 	SendCommand(*CommandPacket) <-chan *ReplyPacket
+
+	ReadPacket() (*WrappedPacket, error)
 }
 
 type session struct {
@@ -55,21 +57,21 @@ type request struct {
 
 // WrappedPacket represents a command or reply packet
 type WrappedPacket struct {
-	id            uint32
-	flags         byte
-	commandPacket *CommandPacket
-	replyPacket   *ReplyPacket
+	Id            uint32
+	Flags         byte
+	CommandPacket *CommandPacket
+	ReplyPacket   *ReplyPacket
 }
 
 func (w *WrappedPacket) isCommandPacket() bool {
-	return w.commandPacket != nil
+	return w.CommandPacket != nil
 }
 
 func (w *WrappedPacket) String() string {
-	if w.commandPacket != nil {
-		return fmt.Sprintf("{id=%v flags=%x commandpacket=%v", w.id, w.flags, w.commandPacket)
+	if w.CommandPacket != nil {
+		return fmt.Sprintf("{id=%v flags=%x commandpacket=%v", w.Id, w.Flags, w.CommandPacket)
 	}
-	return fmt.Sprintf("{id=%v flags=%x replypacket=%v", w.id, w.flags, w.replyPacket)
+	return fmt.Sprintf("{id=%v flags=%x replypacket=%v", w.Id, w.Flags, w.ReplyPacket)
 }
 
 // CommandPacket represents a command packet
@@ -176,7 +178,9 @@ func (s *session) txLoop() {
 }
 
 func (s *session) writePacket(request *request) error {
-	s.conn.SetWriteDeadline(time.Now().Add(defaultWriteDeadlineMillis * time.Millisecond))
+	//s.conn.SetWriteDeadline(time.Now().Add(defaultWriteDeadlineMillis * time.Millisecond))
+	//s.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
 	var totalsize = 11 + (uint32)(len(request.commandPacket.Data))
 	err := binary.Write(s.conn, binary.BigEndian, totalsize)
 	if err != nil {
@@ -210,52 +214,72 @@ func (s *session) writePacket(request *request) error {
 }
 
 func (s *session) dispatchInboundPacket() error {
-	wrappedPacket, err := s.readPacket()
+	wrappedPacket, err := s.ReadPacket()
 	s.sessionMutex.Lock()
 	defer s.sessionMutex.Unlock()
 
 	if err != nil {
 		return err
 	}
+
 	if wrappedPacket.isCommandPacket() {
-		s.jvmCommandPackets <- wrappedPacket.commandPacket
+		s.jvmCommandPackets <- wrappedPacket.CommandPacket
 	} else {
-		request, ok := s.requestPending[wrappedPacket.id]
+		request, ok := s.requestPending[wrappedPacket.Id]
 		if !ok {
-			fmt.Printf("warn: got unexpected reply for id: %v", wrappedPacket.id)
+			fmt.Printf("warn: got unexpected reply for id: %v", wrappedPacket.Id)
 		} else {
-			request.replyCh <- wrappedPacket.replyPacket
+			request.replyCh <- wrappedPacket.ReplyPacket
 			//close(request.replyCh) //TODO turn back on
 		}
 	}
 	return nil
 }
-func (s *session) readPacket() (*WrappedPacket, error) {
+
+// 现在就是收到数据了 但是不知道为什么没有进行退出
+func (s *session) ReadPacket() (*WrappedPacket, error) {
 	var wrappedPacket WrappedPacket
-	s.conn.SetReadDeadline(time.Time{})
+	s.conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+	//var size uint32
+	//for {
+	//	err := binary.Read(s.conn, binary.BigEndian, &size)
+	//	if err != nil {
+	//		fmt.Println(fmt.Sprintf("[!] readPacket Error Happen: %s", err))
+	//		return nil, err
+	//	}
+	//	if size != 0 {
+	//		fmt.Println(fmt.Sprintf("[+] recv: %v", size))
+	//		break
+	//	} else {
+	//		time.Sleep(500 * time.Millisecond)
+	//	}
+	//}
 	var size uint32
 	err := binary.Read(s.conn, binary.BigEndian, &size)
 	if err != nil {
 		return nil, err
 	}
-	s.conn.SetReadDeadline(time.Now().Add(defaultReadDeadlineMillis * time.Millisecond))
+	//s.conn.SetReadDeadline(time.Now().Add(defaultReadDeadlineMillis * time.Millisecond))
+	// 猜测如果不输出的话就阻塞了
+	fmt.Println(fmt.Sprintf("recv size: %v", size)) // 离谱 一定要加这个 不然的话就会不稳定... （不过能稳定就是好事情)
+
 	if size < headerBytes {
 		return nil, fmt.Errorf("packet too small: %v", size)
 	}
 	dataSize := size - headerBytes
-	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.id)
+	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.Id)
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.flags)
+	err = binary.Read(s.conn, binary.BigEndian, &wrappedPacket.Flags)
 	if err != nil {
 		return nil, err
 	}
 
 	var dataSlice *[]byte
-	if wrappedPacket.flags&flagsReplyPacket == flagsReplyPacket {
+	if wrappedPacket.Flags&flagsReplyPacket == flagsReplyPacket {
 		var replyPacket ReplyPacket
-		wrappedPacket.replyPacket = &replyPacket
+		wrappedPacket.ReplyPacket = &replyPacket
 		err = binary.Read(s.conn, binary.BigEndian, &replyPacket.Errorcode)
 		if err != nil {
 			return nil, err
@@ -263,7 +287,7 @@ func (s *session) readPacket() (*WrappedPacket, error) {
 		dataSlice = &replyPacket.Data
 	} else {
 		var commandPacket CommandPacket
-		wrappedPacket.commandPacket = &commandPacket
+		wrappedPacket.CommandPacket = &commandPacket
 		err = binary.Read(s.conn, binary.BigEndian, &commandPacket.Commandset)
 		if err != nil {
 			return nil, err
