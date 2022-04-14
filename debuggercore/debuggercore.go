@@ -2,6 +2,7 @@ package debuggercore
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/kpli0rn/jdwpgo/api/jdwp"
 	"github.com/kpli0rn/jdwpgo/jdwpsession"
 	"gopkg.in/restruct.v1"
@@ -54,7 +55,9 @@ func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{
 	}
 
 	wrapPacket := d.jdwpsession.SendCommand(commandPacket)
-
+	if wrapPacket == nil {
+		return errors.New("reply is nil")
+	}
 	if cmd.HasReplyData {
 		// 4c000000000000117c4c0000000000000000
 		err = restruct.Unpack(wrapPacket.ReplyPacket.Data, binary.BigEndian, replyStruct)

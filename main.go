@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
+	conn, err := net.Dial("tcp", "localhost:8000")
 	if err != nil {
 		fmt.Printf("error dial: %v\n", err)
 		return
@@ -70,7 +70,11 @@ func main() {
 	}
 	fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
 	debuggerCore.VMCommands().Suspend()
-	reply, _ := debuggerCore.VMCommands().SendEventRequest(1, threadID)
+	reply, err := debuggerCore.VMCommands().SendEventRequest(1, threadID)
+	if err != nil {
+		fmt.Println("Could not find a suitable thread for stepping\n")
+		return
+	}
 	debuggerCore.VMCommands().Resume()
 
 	buf := make([]byte, 128)
