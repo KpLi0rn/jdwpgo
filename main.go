@@ -111,5 +111,5 @@ func main() {
 	argsIDHex := strconv.FormatInt(int64(invokeStaticMethodReply.Tag), 16) + hex.EncodeToString(cmdObjectIDHex)
 	argsID, _ := hex.DecodeString(argsIDHex)
 	debuggerCore.VMCommands().InvokeMethod(invokeStaticMethodReply.ContextID, tId, runtimeClas.ReferenceTypeID, execMethod.MethodID, argsID)
-
+	debuggerCore.VMCommands().Resume()
 }
