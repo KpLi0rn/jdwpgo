@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/kpli0rn/jdwpgo/common"
 	"github.com/kpli0rn/jdwpgo/debuggercore"
 	"github.com/kpli0rn/jdwpgo/jdwpsession"
 	"github.com/kpli0rn/jdwpgo/protocol/vm"
@@ -11,26 +12,6 @@ import (
 	"net"
 	"strconv"
 )
-
-func getMethodByName(methods *vm.AllMethodsReply, name string) *vm.AllMethodsMethod {
-	for _, method := range methods.Methods {
-		if method.Name.String() == name {
-			return &method
-		}
-	}
-	return nil
-}
-
-func parseEvent(buf []byte, eventId int32, idsize *vm.IDSizesReply) (int32, uint64) {
-	raw := buf[11:]
-	rId := int32(binary.BigEndian.Uint32(raw[6:10]))
-	if rId != eventId {
-		return 0, 0
-	}
-	rawtId := raw[10 : 10+idsize.ObjectIDSize]
-	tId := binary.BigEndian.Uint64(rawtId)
-	return rId, tId
-}
 
 func main() {
 
@@ -70,7 +51,7 @@ func main() {
 	}
 	fmt.Println(fmt.Sprintf("[+] Found Runtime class: id=%v", runtimeClas.ReferenceTypeID))
 	methods, _ := debuggerCore.VMCommands().AllMethods(runtimeClas.ReferenceTypeID) // 10d9
-	getRuntimeMethod := getMethodByName(methods, "getRuntime")
+	getRuntimeMethod := common.GetMethodByName(methods, "getRuntime")
 	if getRuntimeMethod == nil {
 		return
 	}
@@ -98,7 +79,7 @@ func main() {
 	num, _ := conn.Read(buf) // 好像和 read那个 会有一个阻塞 然后就会导致读不到
 	if num != 0 {
 		replyData := buf[:num]
-		rId, tId = parseEvent(replyData, reply.RequestID, idSizes)
+		rId, tId = common.ParseEvent(replyData, reply.RequestID, idSizes)
 		//fmt.Println(hex.EncodeToString(replyData))
 	}
 	fmt.Println(fmt.Sprintf("[+] Received matching event from thread %v", tId))
@@ -122,7 +103,7 @@ func main() {
 
 	// step 3
 	// find exec method
-	execMethod := getMethodByName(methods, "exec")
+	execMethod := common.GetMethodByName(methods, "exec")
 	if execMethod == nil {
 		return
 	}
