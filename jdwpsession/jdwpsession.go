@@ -12,8 +12,8 @@ import (
 )
 
 const defaultPacketQueueLength = 50
-const defaultReadDeadlineMillis = 5000
-const defaultWriteDeadlineMillis = 5000
+const defaultReadDeadlineMillis = 2000
+const defaultWriteDeadlineMillis = 2000
 
 const headerBytes = 11
 const handshakebytes = "JDWP-Handshake"
