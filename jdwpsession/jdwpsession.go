@@ -55,11 +55,10 @@ type session struct {
 type request struct {
 	id            uint32
 	replyCh       chan *ReplyPacket
-	commandPacket *CommandPacket // 请求中发送的 sig
+	commandPacket *CommandPacket
 }
 
 // WrappedPacket represents a command or reply packet
-// 针对请求进行封装 或者针对返回包进行解析处理
 type WrappedPacket struct {
 	Id            uint32
 	Flags         byte
@@ -67,7 +66,6 @@ type WrappedPacket struct {
 	ReplyPacket   *ReplyPacket
 }
 
-// 判断是不是空
 func (w *WrappedPacket) isCommandPacket() bool {
 	return w.CommandPacket != nil
 }
@@ -129,8 +127,6 @@ func (s *session) Start() error {
 	}
 	s.jvmCommandPackets = make(chan *CommandPacket, defaultPacketQueueLength)
 	s.state = sessionOpen
-	//go s.rxLoop() // 这里是进行死循环的
-	//go s.txLoop() // 这里是进行死循环的
 	return nil
 }
 
@@ -147,22 +143,6 @@ func (s *session) readAndCheckHandshakeFrame() error {
 	return err
 }
 
-// 调用 dispatch 然后对通道进行关闭
-//func (s *session) rxLoop() {
-//	for atomic.LoadInt32(&s.state) == sessionOpen {
-//		err := s.dispatchInboundPacket()
-//		if err != nil {
-//			s.setErrorState(err)
-//			break
-//		}
-//	}
-//
-//	close(s.jvmCommandPackets)
-//	for _, request := range s.requestPending {
-//		close(request.replyCh)
-//	}
-//}
-
 func (s *session) setErrorState(err error) {
 	s.sessionMutex.Lock()
 	defer s.sessionMutex.Unlock()
@@ -172,18 +152,6 @@ func (s *session) setErrorState(err error) {
 	}
 }
 
-//func (s *session) txLoop() {
-//	// TODO need exit from here
-//	for request := range s.requestPendingQueue {
-//		err := s.writePacket(request)
-//		if err != nil {
-//			s.setErrorState(err)
-//			break
-//		}
-//	}
-//}
-
-// 往 conn 进行编写，数据是在 request 的 commandPacket 里面
 func (s *session) WritePacket(request *request) error {
 	s.conn.SetWriteDeadline(time.Now().Add(defaultWriteDeadlineMillis * time.Millisecond))
 	//s.conn.SetWriteDeadline(time.Now().Add(100 * time.Second))
@@ -222,16 +190,15 @@ func (s *session) WritePacket(request *request) error {
 
 //
 func (s *session) DispatchInboundPacket() error {
-	wrappedPacket, err := s.ReadPacket() // 读取数据包，返回解析好的数据包
+	wrappedPacket, err := s.ReadPacket()
 	s.sessionMutex.Lock()
 	defer s.sessionMutex.Unlock()
 	if err != nil {
 		return err
 	}
 	if wrappedPacket.isCommandPacket() {
-		s.jvmCommandPackets <- wrappedPacket.CommandPacket // chan 把包写到 jvm 里面
+		s.jvmCommandPackets <- wrappedPacket.CommandPacket
 	} else {
-		// 根据包的 id 来从 request pend 里面进行获取
 		request, ok := s.requestPending[wrappedPacket.Id]
 		if !ok {
 			fmt.Printf("warn: got unexpected reply for id: %v", wrappedPacket.Id)
@@ -247,16 +214,11 @@ func (s *session) ReadPacket() (*WrappedPacket, error) {
 
 	var wrappedPacket WrappedPacket
 	s.conn.SetReadDeadline(time.Now().Add(100 * time.Second))
-
 	var size uint32
-	//binary.Read(s.conn, binary.BigEndian, &size)
 	err := binary.Read(s.conn, binary.BigEndian, &size)
 	if err != nil {
 		return nil, err
 	}
-	//s.conn.SetReadDeadline(time.Now().Add(defaultReadDeadlineMillis * time.Millisecond))
-	//fmt.Println(fmt.Sprintf("[+] recv size: %v", size)) // 离谱 一定要加这个 不然的话就会不稳定... （不过能稳定就是好事情)
-	//log.Println(fmt.Sprintf("[+] recv size: %v", size))
 	if size < headerBytes {
 		return nil, fmt.Errorf("packet too small: %v", size)
 	}
@@ -270,7 +232,7 @@ func (s *session) ReadPacket() (*WrappedPacket, error) {
 		return nil, errors.New("3")
 	}
 	var dataSlice *[]byte
-	if wrappedPacket.Flags&flagsReplyPacket == flagsReplyPacket { // 这里是处理响应
+	if wrappedPacket.Flags&flagsReplyPacket == flagsReplyPacket {
 		var replyPacket ReplyPacket
 		wrappedPacket.ReplyPacket = &replyPacket
 		err = binary.Read(s.conn, binary.BigEndian, &replyPacket.Errorcode)
@@ -293,8 +255,7 @@ func (s *session) ReadPacket() (*WrappedPacket, error) {
 	}
 
 	*dataSlice = make([]byte, dataSize)
-	//io.ReadFull(s.conn, *dataSlice) //指针
-	_, err = io.ReadFull(s.conn, *dataSlice) // 将 conn 的数据写到 这里面  然后timeout是 s.conn 抛出来的
+	_, err = io.ReadFull(s.conn, *dataSlice)
 	if err != nil {
 		return nil, err
 	}
@@ -317,29 +278,7 @@ func (s *session) JvmCommandPacketChannel() <-chan *CommandPacket {
 	return s.jvmCommandPackets
 }
 
-//func (s *session) SendCommand(commandPacket *CommandPacket) <-chan *ReplyPacket {
-//
-//	sendid := atomic.AddUint32(&s.sequence, 1)
-//	request := request{
-//		id:            sendid,
-//		replyCh:       make(chan *ReplyPacket, 1),
-//		commandPacket: commandPacket,
-//	}
-//	// 对数据进行发送
-//	s.WritePacket(&request)
-//	wrappedPacket, _ := s.ReadPacket()
-//	fmt.Println(wrappedPacket.ReplyPacket)
-//	s.sessionMutex.Lock()
-//	s.requestPending[sendid] = &request
-//	s.sessionMutex.Unlock()
-//	// the transmission MUST occur after
-//	s.requestPendingQueue <- &request
-//
-//	return request.replyCh
-//}
-
 func (s *session) SendCommand(commandPacket *CommandPacket) *WrappedPacket {
-
 	sendid := atomic.AddUint32(&s.sequence, 1)
 	request := request{
 		id:            sendid,
@@ -353,8 +292,6 @@ func (s *session) SendCommand(commandPacket *CommandPacket) *WrappedPacket {
 	s.sessionMutex.Lock()
 	s.requestPending[sendid] = &request
 	s.sessionMutex.Unlock()
-	// the transmission MUST occur after
-	//s.requestPendingQueue <- &request
 
 	return wrappedPacket
 }

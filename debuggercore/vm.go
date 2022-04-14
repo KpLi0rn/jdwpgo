@@ -218,7 +218,6 @@ func (d *debuggercore) CreateString(command string) (*vm.CreateStringReply, erro
 	lenCommand := make([]byte, 4)
 	binary.BigEndian.PutUint32(lenCommand, uint32(len(command)))
 	commandByte := append(lenCommand, []byte(command)...)
-	//test, _ := hex.DecodeString("0000003d62617368202d63207b6563686f2c6233426c62694174595342445957786a64577868644739797d7c7b6261736536342c2d647d7c7b626173682c2d697d")
 	err := d.processCommand(vm.CreateStringCommand, commandByte, &createStringReply, true)
 	if err != nil {
 		return nil, err
