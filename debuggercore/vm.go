@@ -1,6 +1,7 @@
 package debuggercore
 
 import (
+	"encoding/binary"
 	"github.com/kpli0rn/jdwpgo/protocol/basetypes"
 	"github.com/kpli0rn/jdwpgo/protocol/vm"
 )
@@ -30,6 +31,13 @@ type VMCommands interface {
 	AllMethods(refTypeId basetypes.JWDPRefTypeID) (*vm.AllMethodsReply, error)
 	SendEventRequest(eventKind int8, threadId uint64) (*vm.EventRequestSetReply, error)
 	ClearCommand(requestId int32) error
+
+	// method invoke
+	CreateString(command string) (*vm.CreateStringReply, error)
+	// 无参
+	InvokeStaticMethod(runtimeClasId basetypes.JWDPRefTypeID, threadId uint64, methodId uint64) (*vm.InvokeStaticMethodReply, error)
+	// 有参
+	InvokeMethod(objectID uint64, threadId uint64, runtimeClasId basetypes.JWDPRefTypeID, methodId uint64, commandID []byte) (*vm.InvokeMethodReply, error)
 }
 
 func (d *debuggercore) Version() (*vm.VersionReply, error) {
@@ -177,14 +185,13 @@ func (d *debuggercore) SendEventRequest(eventKind int8, threadId uint64) (*vm.Ev
 }
 
 // https://docs.oracle.com/en/java/javase/11/docs/specs/jdwp/jdwp-protocol.html#JDWP_EventRequest
-// eventkind 1 未测试 存在问题
 func (d *debuggercore) ClearCommand(requestId int32) error {
 
 	clearEventRequest := &vm.ClearEventRequest{
 		EventKind: 1, // 这个eventkind 可以写死
 		RequestID: requestId,
 	}
-	err := d.processCommand(vm.ClearEventCommand, clearEventRequest, nil, true)
+	err := d.processCommand(vm.ClearEventCommand, clearEventRequest, nil, false)
 	if err != nil {
 		return err
 	}
@@ -197,9 +204,62 @@ func (d *debuggercore) StatusThread(threadId uint64) (*vm.ThreadStatusReply, err
 	threadStatusRequest := &vm.ThreadStatusRequest{
 		ThreadID: threadId,
 	}
+
 	err := d.processCommand(vm.ThreadStatusCommand, threadStatusRequest, &threadStatusReply, false)
 	if err != nil {
 		return nil, err
 	}
 	return &threadStatusReply, err
+}
+
+// https://docs.oracle.com/javase/8/docs/platform/jpda/jdwp/jdwp-protocol.html#JDWP_VirtualMachine_CreateString
+func (d *debuggercore) CreateString(command string) (*vm.CreateStringReply, error) {
+	var createStringReply vm.CreateStringReply
+	lenCommand := make([]byte, 4)
+	binary.BigEndian.PutUint32(lenCommand, uint32(len(command)))
+	commandByte := append(lenCommand, []byte(command)...)
+	//test, _ := hex.DecodeString("0000003d62617368202d63207b6563686f2c6233426c62694174595342445957786a64577868644739797d7c7b6261736536342c2d647d7c7b626173682c2d697d")
+	err := d.processCommand(vm.CreateStringCommand, commandByte, &createStringReply, true)
+	if err != nil {
+		return nil, err
+	}
+	return &createStringReply, err
+}
+
+// https://docs.oracle.com/javase/8/docs/platform/jpda/jdwp/jdwp-protocol.html#JDWP_ClassType_InvokeMethod
+func (d *debuggercore) InvokeStaticMethod(runtimeClasId basetypes.JWDPRefTypeID, threadId uint64, methodId uint64) (*vm.InvokeStaticMethodReply, error) {
+	var invokeStaticMethodReply vm.InvokeStaticMethodReply
+
+	invokeStaticMethodRequest := &vm.InvokeStaticMethodRequest{
+		ClassID:  runtimeClasId,
+		ThreadID: threadId,
+		MethodID: methodId,
+		ArgLen:   0,
+		Options:  0,
+	}
+
+	err := d.processCommand(vm.InvokeStaticMethodCommand, invokeStaticMethodRequest, &invokeStaticMethodReply, false)
+	if err != nil {
+		return nil, err
+	}
+	return &invokeStaticMethodReply, err
+}
+
+func (d *debuggercore) InvokeMethod(objectID uint64, threadId uint64, runtimeClasId basetypes.JWDPRefTypeID, methodId uint64, commandID []byte) (*vm.InvokeMethodReply, error) {
+	var invokeMethodReply vm.InvokeMethodReply
+
+	invokeMethodRequest := &vm.InvokeMethodRequest{
+		ObjectID: objectID,
+		ThreadID: threadId,
+		ClassID:  runtimeClasId,
+		MethodID: methodId,
+		ArgLen:   1,
+		Arg:      commandID, // 这里应该要传递的是 id
+		Options:  0,
+	}
+	err := d.processCommand(vm.InvokeMethodCommand, invokeMethodRequest, &invokeMethodReply, false)
+	if err != nil {
+		return nil, err
+	}
+	return &invokeMethodReply, err
 }

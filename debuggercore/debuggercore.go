@@ -2,7 +2,6 @@ package debuggercore
 
 import (
 	"encoding/binary"
-	"errors"
 	"github.com/kpli0rn/jdwpgo/api/jdwp"
 	"github.com/kpli0rn/jdwpgo/jdwpsession"
 	"gopkg.in/restruct.v1"
@@ -36,47 +35,29 @@ func (d *debuggercore) ThreadCommands() ThreadCommands {
 	return d
 }
 
-func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{}, replyStruct interface{}, listen bool) error {
+func (d *debuggercore) processCommand(cmd jdwp.Command, requestStruct interface{}, replyStruct interface{}, custom bool) error {
 	commandPacket := &jdwpsession.CommandPacket{
 		Commandset: cmd.Commandset,
 		Command:    cmd.Command,
 	}
 	var err error
+
+	// 可自己控制输入
+	if custom {
+		commandPacket.Data = requestStruct.([]byte)
+	}
 	if cmd.HasCommandData {
 		commandPacket.Data, err = restruct.Pack(binary.BigEndian, requestStruct)
 		if err != nil {
 			return err
 		}
 	}
-	// TODO implement timeout
 
-	replyCh := d.jdwpsession.SendCommand(commandPacket)
-	//select {
-	//case reply, ok := <-replyCh:
-	//	if !ok {
-	//		return errors.New("Channel closed")
-	//	}
-	//	if cmd.HasReplyData {
-	//		//_ = reply.Data
-	//		err = restruct.Unpack(reply.Data, binary.BigEndian, replyStruct)
-	//	}
-	//	return err
-	//
-	//}
-
-	if listen {
-		return err
-	}
-	reply, ok := <-replyCh // 这里被阻塞了
-	if !ok {
-		return errors.New("Channel closed")
-	}
-
-	// TODO handle protocol returned err
+	wrapPacket := d.jdwpsession.SendCommand(commandPacket)
 
 	if cmd.HasReplyData {
-		//_ = reply.Data
-		err = restruct.Unpack(reply.Data, binary.BigEndian, replyStruct)
+		// 4c000000000000117c4c0000000000000000
+		err = restruct.Unpack(wrapPacket.ReplyPacket.Data, binary.BigEndian, replyStruct)
 	}
 	return err
 }

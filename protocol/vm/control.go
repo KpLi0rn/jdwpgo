@@ -58,3 +58,26 @@ type ClearEventRequest struct {
 type ThreadStatusRequest struct {
 	ThreadID uint64
 }
+
+//type CreateStringRequest struct {
+//	Command []byte
+//}
+
+type InvokeStaticMethodRequest struct {
+	ClassID  basetypes.JWDPRefTypeID
+	ThreadID uint64
+	MethodID uint64
+	ArgLen   int32
+	//Arg      []string
+	Options int32
+}
+
+type InvokeMethodRequest struct {
+	ObjectID uint64
+	ThreadID uint64
+	ClassID  basetypes.JWDPRefTypeID
+	MethodID uint64
+	ArgLen   uint32
+	Arg      []byte
+	Options  int32
+}
