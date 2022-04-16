@@ -44,6 +44,7 @@ func (a *AllClassClass) String() string {
 	)
 }
 
+// check isempty
 func (a *AllClassClass) IsEmpty() bool {
 	return reflect.DeepEqual(a, AllClassClass{})
 }
