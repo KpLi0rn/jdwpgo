@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/kpli0rn/jdwpgo/api/jdwp"
@@ -41,6 +42,10 @@ func (a *AllClassClass) String() string {
 		a.Signature.String(),
 		a.Status.String(),
 	)
+}
+
+func (a *AllClassClass) IsEmpty() bool {
+	return reflect.DeepEqual(a, AllClassClass{})
 }
 
 // AllClassClassStatus represents a class's status

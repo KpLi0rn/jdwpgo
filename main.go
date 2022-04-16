@@ -51,10 +51,17 @@ func main() {
 			runtimeClas = clas
 		}
 	}
+
+	if runtimeClas.IsEmpty() {
+		fmt.Println("[-] Cannot find class Runtime")
+		return
+	}
+
 	fmt.Println(fmt.Sprintf("[+] Found Runtime class: id=%v", runtimeClas.ReferenceTypeID))
 	methods, _ := debuggerCore.VMCommands().AllMethods(runtimeClas.ReferenceTypeID)
 	getRuntimeMethod := common.GetMethodByName(methods, "getRuntime")
 	if getRuntimeMethod == nil {
+		fmt.Println("[-] Cannot find method getRuntime")
 		return
 	}
 	fmt.Println(fmt.Sprintf("[+] Found Runtime.getRuntime(): %s", getRuntimeMethod.String()))
@@ -71,16 +78,12 @@ func main() {
 		}
 	}
 	if threadID == 0 {
-		fmt.Println("Could not find a suitable thread")
+		fmt.Println("[-] Could not find a suitable thread")
 		return
 	}
 	fmt.Println(fmt.Sprintf("[+] Setting 'step into' event in thread: %v", threadID))
 	debuggerCore.VMCommands().Suspend()
 	reply, err := debuggerCore.VMCommands().SendEventRequest(1, threadID)
-	if err != nil {
-		fmt.Println("Could not find a suitable thread for stepping\n")
-		return
-	}
 	debuggerCore.VMCommands().Resume()
 
 	buf := make([]byte, 128)
